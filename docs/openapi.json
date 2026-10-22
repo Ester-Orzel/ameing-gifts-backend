@@ -1,0 +1,2141 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Ameing - מתנות במיתוג אישי - API",
+    "version": "1.0.0",
+    "description": "שרת לאתר מתנות במיתוג אישי.\n\n**איך בודקים כתובות מוגנות:**\n1. פתחי את `POST /api/auth/login` ולחצי **Try it out**.\n2. שלחי אימייל וסיסמה (בפיתוח: `admin@example.com` / `Admin1234!` למנהל, או `rachel.cohen@example.com` / `Demo1234!` ללקוחה).\n3. העתיקי את הערך של `token` מהתשובה.\n4. לחצי על הכפתור **Authorize** למעלה, הדביקי את ה-Token (בלי המילה Bearer) ולחצי Authorize.\n5. עכשיו כל הבקשות נשלחות עם ה-Token.\n\nשגיאות: 400 נתונים לא תקינים, 401 לא מחובר, 403 אין הרשאה, 404 לא נמצא, 409 התנגשות."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "השרת הנוכחי"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "בדיקת תקינות"
+    },
+    {
+      "name": "Auth",
+      "description": "הרשמה, התחברות ופרטי המשתמש המחובר"
+    },
+    {
+      "name": "Products",
+      "description": "מוצרים"
+    },
+    {
+      "name": "Orders",
+      "description": "הזמנות"
+    },
+    {
+      "name": "Categories",
+      "description": "קטגוריות"
+    },
+    {
+      "name": "Fonts",
+      "description": "גופנים להדפסה"
+    },
+    {
+      "name": "Colors",
+      "description": "צבעי הדפסה"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "הדביקי כאן את ה-Token שהתקבל מ-login (בלי המילה Bearer)"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "example": "נתונים לא תקינים"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "example": "deliveryAddress"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "במשלוח יש להזין כתובת מלאה (לפחות 5 תווים)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unreachable"
+            ]
+          },
+          "uptimeSeconds": {
+            "type": "integer"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "description": "משתמש. סיסמה ו-Hash לעולם לא מוחזרים.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "ADMIN"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "example": {
+          "id": 2,
+          "fullName": "רחל כהן",
+          "email": "rachel.cohen@example.com",
+          "phone": "0521234567",
+          "role": "CUSTOMER",
+          "createdAt": "2026-10-01T09:30:00.000Z"
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT Access Token. יש לשלוח בכותרת Authorization: Bearer <token>"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "תוקף ה-Token בשניות",
+            "example": 7200
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "fullName",
+          "email",
+          "phone",
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60,
+            "example": "רחל כהן"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 120,
+            "example": "new.customer@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "9-10 ספרות שמתחילות ב-0. מקפים ורווחים מוסרים",
+            "example": "052-1234567"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "description": "לפחות אות אחת וספרה אחת",
+            "example": "MyPass123"
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "productsCount": {
+            "type": "integer",
+            "description": "כמה מוצרים בקטגוריה (רק ברשימה)"
+          }
+        },
+        "example": {
+          "id": 1,
+          "name": "בקבוקים ותרמוסים",
+          "productsCount": 3
+        }
+      },
+      "NameInput": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          }
+        }
+      },
+      "Font": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "id": 5,
+          "name": "Great Vibes"
+        }
+      },
+      "Color": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hexCode": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        },
+        "example": {
+          "id": 1,
+          "name": "זהב",
+          "hexCode": "#D4AF37"
+        }
+      },
+      "ColorCreateInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "hexCode"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40,
+            "example": "טורקיז"
+          },
+          "hexCode": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "example": "#40E0D0"
+          }
+        }
+      },
+      "ColorUpdateInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "לפחות שדה אחד",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          },
+          "hexCode": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "מחיר בשקלים"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "personalizationType": {
+            "type": "string",
+            "enum": [
+              "NAME_OR_INITIAL",
+              "INITIAL_ONLY"
+            ],
+            "description": "NAME_OR_INITIAL = אפשר שם או אות. INITIAL_ONLY = אות בלבד"
+          },
+          "categoryId": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "example": {
+          "id": 1,
+          "name": "תרמוס צבעוני חכם",
+          "description": "תרמוס נירוסטה בצבעי מעבר עדינים, שומר על חום וקור עד 12 שעות. מגיע עם הדפסת שם לבחירה.",
+          "price": 89.9,
+          "imageUrl": "https://placehold.co/600x600/f3e5e1/8a5a44?text=Thermos",
+          "personalizationType": "NAME_OR_INITIAL",
+          "categoryId": 1,
+          "category": {
+            "id": 1,
+            "name": "בקבוקים ותרמוסים"
+          },
+          "createdAt": "2026-10-01T09:00:00.000Z",
+          "updatedAt": "2026-10-01T09:00:00.000Z"
+        }
+      },
+      "ProductCreateInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "price",
+          "imageUrl",
+          "personalizationType",
+          "categoryId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 100000,
+            "description": "עד 2 ספרות אחרי הנקודה"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "personalizationType": {
+            "type": "string",
+            "enum": [
+              "NAME_OR_INITIAL",
+              "INITIAL_ONLY"
+            ]
+          },
+          "categoryId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "example": {
+          "name": "ספל קרמיקה לבן",
+          "description": "ספל קרמיקה קלאסי בנפח 330 מ\"ל, מתאים למדיח. הדפסת שם או אות לבחירה.",
+          "price": 45,
+          "imageUrl": "https://placehold.co/600x600/f3e5e1/8a5a44?text=Mug",
+          "personalizationType": "NAME_OR_INITIAL",
+          "categoryId": 5
+        }
+      },
+      "ProductUpdateInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "שולחים רק את השדות שרוצים לשנות (לפחות אחד)",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 100000
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "personalizationType": {
+            "type": "string",
+            "enum": [
+              "NAME_OR_INITIAL",
+              "INITIAL_ONLY"
+            ]
+          },
+          "categoryId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "example": {
+          "price": 79.9
+        }
+      },
+      "ProductList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "description": "כמה מוצרים תואמים בסך הכל"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      },
+      "OrderItemInput": {
+        "type": "object",
+        "required": [
+          "productId",
+          "personalizationKind"
+        ],
+        "additionalProperties": false,
+        "description": "פריט אחד מהסל. NONE: בלי טקסט, גופן וצבע. NAME: שם של 2-20 אותיות (רק במוצר NAME_OR_INITIAL) + גופן + צבע. INITIAL: אות אחת + גופן + צבע.",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "personalizationKind": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "NAME",
+              "INITIAL"
+            ]
+          },
+          "personalizationText": {
+            "type": "string",
+            "nullable": true
+          },
+          "fontId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "colorId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          }
+        }
+      },
+      "OrderCreateInput": {
+        "type": "object",
+        "required": [
+          "deliveryMethod",
+          "contactName",
+          "contactPhone",
+          "items"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "deliveryMethod": {
+            "type": "string",
+            "enum": [
+              "DELIVERY",
+              "PICKUP"
+            ],
+            "description": "DELIVERY = משלוח, PICKUP = איסוף עצמי"
+          },
+          "contactName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "contactPhone": {
+            "type": "string",
+            "description": "9-10 ספרות שמתחילות ב-0"
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "חובה במשלוח (לפחות 5 תווים). באיסוף עצמי לא נשמרת"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/OrderItemInput"
+            }
+          }
+        },
+        "example": {
+          "deliveryMethod": "DELIVERY",
+          "contactName": "רחל כהן",
+          "contactPhone": "0521234567",
+          "deliveryAddress": "רחוב הרצל 12, בני ברק",
+          "notes": "בבקשה לעטוף כמתנה",
+          "items": [
+            {
+              "productId": 1,
+              "personalizationKind": "NAME",
+              "personalizationText": "Miriam",
+              "fontId": 5,
+              "colorId": 1
+            },
+            {
+              "productId": 4,
+              "personalizationKind": "INITIAL",
+              "personalizationText": "B",
+              "fontId": 5,
+              "colorId": 2
+            },
+            {
+              "productId": 9,
+              "personalizationKind": "NONE"
+            }
+          ]
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "integer"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "productImageUrl": {
+            "type": "string"
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "המחיר ברגע ההזמנה"
+          },
+          "personalizationKind": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "NAME",
+              "INITIAL"
+            ]
+          },
+          "personalizationText": {
+            "type": "string",
+            "nullable": true
+          },
+          "font": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Font"
+              }
+            ]
+          },
+          "color": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              }
+            ]
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "customerId": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "RECEIVED",
+              "IN_PROGRESS",
+              "READY",
+              "DELIVERED",
+              "CANCELLED"
+            ],
+            "description": "RECEIVED=התקבלה, IN_PROGRESS=בהכנה, READY=מוכנה, DELIVERED=נמסרה, CANCELLED=בוטלה"
+          },
+          "deliveryMethod": {
+            "type": "string",
+            "enum": [
+              "DELIVERY",
+              "PICKUP"
+            ]
+          },
+          "contactName": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalPrice": {
+            "type": "number"
+          },
+          "itemsCount": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customer": {
+            "type": "object",
+            "description": "מופיע רק בתשובות למנהל",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          }
+        },
+        "example": {
+          "id": 31,
+          "customerId": 2,
+          "status": "RECEIVED",
+          "deliveryMethod": "DELIVERY",
+          "contactName": "רחל כהן",
+          "contactPhone": "0521234567",
+          "deliveryAddress": "רחוב הרצל 12, בני ברק",
+          "notes": null,
+          "totalPrice": 214.7,
+          "itemsCount": 3,
+          "createdAt": "2026-10-21T10:15:00.000Z",
+          "updatedAt": "2026-10-21T10:15:00.000Z",
+          "items": [
+            {
+              "id": 81,
+              "productId": 1,
+              "productName": "תרמוס צבעוני חכם",
+              "productImageUrl": "https://placehold.co/600x600/f3e5e1/8a5a44?text=Thermos",
+              "unitPrice": 89.9,
+              "personalizationKind": "NAME",
+              "personalizationText": "Miriam",
+              "font": {
+                "id": 5,
+                "name": "Great Vibes"
+              },
+              "color": {
+                "id": 1,
+                "name": "זהב",
+                "hexCode": "#D4AF37"
+              }
+            },
+            {
+              "id": 82,
+              "productId": 4,
+              "productName": "מחזיק מפתחות לב מעור",
+              "productImageUrl": "https://placehold.co/600x600/f3e5e1/8a5a44?text=Keychain",
+              "unitPrice": 39.9,
+              "personalizationKind": "INITIAL",
+              "personalizationText": "B",
+              "font": {
+                "id": 5,
+                "name": "Great Vibes"
+              },
+              "color": {
+                "id": 2,
+                "name": "רוז גולד",
+                "hexCode": "#B76E79"
+              }
+            },
+            {
+              "id": 83,
+              "productId": 9,
+              "productName": "מנורת לילה כוכב",
+              "productImageUrl": "https://placehold.co/600x600/f3e5e1/8a5a44?text=Star+Lamp",
+              "unitPrice": 84.9,
+              "personalizationKind": "NONE",
+              "personalizationText": null,
+              "font": null,
+              "color": null
+            }
+          ]
+        }
+      },
+      "OrderList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      },
+      "OrderStatusInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "RECEIVED",
+              "IN_PROGRESS",
+              "READY",
+              "DELIVERED",
+              "CANCELLED"
+            ]
+          }
+        },
+        "example": {
+          "status": "IN_PROGRESS"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "400 - נתונים לא תקינים",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "נתונים לא תקינים",
+                "details": [
+                  {
+                    "field": "price",
+                    "message": "מחיר חייב להיות גדול מ-0"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "401 - לא מחובר, Token חסר, לא תקין או שפג תוקפו",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "UNAUTHORIZED",
+                "message": "נדרשת התחברות. יש לשלוח Authorization: Bearer <token>"
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "403 - מחובר, אבל אין הרשאה לפעולה הזו",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "FORBIDDEN",
+                "message": "אין לך הרשאה לבצע פעולה זו"
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "404 - לא נמצא",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "NOT_FOUND",
+                "message": "המשאב המבוקש לא נמצא"
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "409 - התנגשות (למשל שם שכבר קיים)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "code": "CONFLICT",
+                "message": "ערך זה כבר קיים במערכת"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "בדיקה שהשרת ומסד הנתונים פעילים",
+        "responses": {
+          "200": {
+            "description": "הכל תקין",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok",
+                  "database": "ok",
+                  "uptimeSeconds": 42,
+                  "timestamp": "2026-10-21T10:00:00.000Z"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "מסד הנתונים לא זמין",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "הרשמת לקוח חדש",
+        "description": "יוצר תמיד משתמש מסוג CUSTOMER, ומחזיר Token כך שהלקוח מחובר מיד.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "נרשם בהצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "description": "האימייל כבר רשום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "כתובת האימייל כבר רשומה במערכת"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "התחברות",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              },
+              "examples": {
+                "admin": {
+                  "summary": "מנהל (פיתוח)",
+                  "value": {
+                    "email": "admin@example.com",
+                    "password": "Admin1234!"
+                  }
+                },
+                "customer": {
+                  "summary": "לקוחה (פיתוח)",
+                  "value": {
+                    "email": "rachel.cohen@example.com",
+                    "password": "Demo1234!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "התחברות הצליחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "description": "אימייל או סיסמה שגויים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "אימייל או סיסמה שגויים"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "פרטי המשתמש המחובר",
+        "description": "מתאים למילוי מראש של שם וטלפון בטופס ההזמנה.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "רשימת מוצרים עם חיפוש, סינון ומיון",
+        "description": "ציבורי - לא נדרשת התחברות.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "חיפוש בשם המוצר",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "example": "תרמוס"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "description": "סינון לפי קטגוריה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "newest = החדשים קודם, price_asc = מהזול ליקר, price_desc = מהיקר לזול, name = לפי שם",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc",
+                "name"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "מספר עמוד (מתחיל ב-1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "כמה רשומות בעמוד (1-50)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "הוספת מוצר",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "המוצר נוצר",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "פרטי מוצר",
+        "description": "ציבורי - לא נדרשת התחברות.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה המוצר",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "עריכת מוצר",
+        "description": "מנהל בלבד. שולחים רק את השדות שמשתנים.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה המוצר",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "עודכן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "שליחת הזמנה עם כל פריטי הסל",
+        "description": "לקוח בלבד (מנהל יקבל 403). הלקוח נקבע לפי ה-Token. המחיר מחושב בשרת לפי המחיר במסד הנתונים.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ההזמנה נוצרה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "נתונים לא תקינים",
+                    "details": [
+                      {
+                        "field": "items.1.personalizationKind",
+                        "message": "המוצר \"מחזיק מפתחות לב מעור\" מאפשר הדפסת אות בלבד"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "כל ההזמנות של כל הלקוחות",
+        "description": "מנהל בלבד. חיפוש לפי שם או טלפון, סינון לפי סטטוס, מיון לפי תאריך.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "סינון לפי סטטוס",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECEIVED",
+                "IN_PROGRESS",
+                "READY",
+                "DELIVERED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "חיפוש לפי שם הלקוח או מספר הטלפון",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "newest = החדשה קודם, oldest = הישנה קודם",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "מספר עמוד (מתחיל ב-1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "כמה רשומות בעמוד (1-50)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/orders/my": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "ההזמנות שלי",
+        "description": "לקוח בלבד. מחזיר רק את ההזמנות של הלקוח המחובר.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "סינון לפי סטטוס",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECEIVED",
+                "IN_PROGRESS",
+                "READY",
+                "DELIVERED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "default": "newest"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "מספר עמוד (מתחיל ב-1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "כמה רשומות בעמוד (1-50)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "פרטי הזמנה",
+        "description": "לקוח: רק הזמנה שלו (הזמנה של אחר מחזירה 404). מנהל: כל הזמנה, כולל פרטי הלקוח.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה ההזמנה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/status": {
+      "patch": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "עדכון סטטוס הזמנה",
+        "description": "מנהל בלבד. הזמנה בסטטוס DELIVERED או CANCELLED היא סופית (409).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה ההזמנה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderStatusInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "עודכן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "ההזמנה בסטטוס סופי",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "code": "ORDER_FINALIZED",
+                    "message": "לא ניתן לשנות הזמנה בסטטוס \"נמסרה\""
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "רשימת הקטגוריות",
+        "description": "ציבורי - לא נדרשת התחברות.",
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "הוספה להקטגוריות",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "נוצר",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "patch": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "עריכה בהקטגוריות",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה הרשומה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "עודכן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/fonts": {
+      "get": {
+        "tags": [
+          "Fonts"
+        ],
+        "summary": "רשימת הגופנים",
+        "description": "ציבורי - לא נדרשת התחברות.",
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Font"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Fonts"
+        ],
+        "summary": "הוספה להגופנים",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "נוצר",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Font"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/fonts/{id}": {
+      "patch": {
+        "tags": [
+          "Fonts"
+        ],
+        "summary": "עריכה בהגופנים",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה הרשומה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "עודכן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Font"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/colors": {
+      "get": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "רשימת הצבעים",
+        "description": "ציבורי - לא נדרשת התחברות.",
+        "responses": {
+          "200": {
+            "description": "הצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Color"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "הוספה להצבעים",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "נוצר",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Color"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/colors/{id}": {
+      "patch": {
+        "tags": [
+          "Colors"
+        ],
+        "summary": "עריכה בהצבעים",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "מזהה הרשומה",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "עודכן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Color"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    }
+  }
+}

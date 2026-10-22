@@ -1,0 +1,151 @@
+// סכמת מסד הנתונים של אתר המתנות.
+// כל שינוי כאן דורש Migration חדש: npm run db:migrate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// תפקיד המשתמש במערכת
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+/// איזו הדפסה אישית המוצר מאפשר
+enum PersonalizationType {
+  NAME_OR_INITIAL
+  INITIAL_ONLY
+}
+
+/// איזו הדפסה הלקוח בחר לפריט
+enum PersonalizationKind {
+  NONE
+  NAME
+  INITIAL
+}
+
+/// סטטוס ההזמנה
+enum OrderStatus {
+  RECEIVED
+  IN_PROGRESS
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+/// אופן קבלת ההזמנה
+enum DeliveryMethod {
+  DELIVERY
+  PICKUP
+}
+
+/// משתמשים: לקוחות ומנהלים
+model User {
+  id           Int      @id @default(autoincrement())
+  fullName     String
+  email        String   @unique
+  phone        String
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+
+  orders Order[]
+
+  @@map("users")
+}
+
+/// קטגוריות מוצרים
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+/// מוצרים - האובייקט המרכזי במערכת
+model Product {
+  id                  Int                 @id @default(autoincrement())
+  name                String
+  description         String
+  price               Decimal             @db.Decimal(10, 2)
+  imageUrl            String
+  personalizationType PersonalizationType
+  categoryId          Int
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@map("products")
+}
+
+/// גופנים להדפסה
+model Font {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  orderItems OrderItem[]
+
+  @@map("fonts")
+}
+
+/// צבעי הדפסה
+model Color {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique
+  hexCode    String
+  orderItems OrderItem[]
+
+  @@map("colors")
+}
+
+/// הזמנות
+model Order {
+  id              Int            @id @default(autoincrement())
+  customerId      Int
+  status          OrderStatus    @default(RECEIVED)
+  deliveryMethod  DeliveryMethod
+  contactName     String
+  contactPhone    String
+  deliveryAddress String?
+  notes           String?
+  totalPrice      Decimal        @db.Decimal(10, 2)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  customer User        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items    OrderItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+/// פריטים בהזמנה. כל פריט הוא מוצר אחד עם הדפסה משלו (ללא כמות)
+model OrderItem {
+  id                  Int                 @id @default(autoincrement())
+  orderId             Int
+  productId           Int
+  unitPrice           Decimal             @db.Decimal(10, 2)
+  personalizationKind PersonalizationKind
+  personalizationText String?
+  fontId              Int?
+  colorId             Int?
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  font    Font?   @relation(fields: [fontId], references: [id], onDelete: Restrict)
+  color   Color?  @relation(fields: [colorId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}

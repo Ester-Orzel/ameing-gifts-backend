@@ -1,0 +1,39 @@
+# הגדרות פריסה ל-Render (Blueprint).
+# אפשר לפרוס בשתי דרכים - שתיהן מוסברות ב-START-HERE.md:
+#   1. ידנית: New -> Web Service, ולהעתיק את הערכים מכאן.
+#   2. אוטומטית: New -> Blueprint, ו-Render קורא את הקובץ הזה.
+#
+# מסד הנתונים לא מוגדר כאן בכוונה: הוא אצל ספק נפרד (למשל Neon),
+# ואת הכתובת שלו מכניסים ידנית כ-DATABASE_URL.
+
+services:
+  - type: web
+    name: ameing-gifts-api
+    runtime: node
+    plan: free
+    # בונה, מריץ Migrations ומוסיף נתוני הדגמה (רק מה שחסר)
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false # להדביק ידנית את כתובת מסד הנתונים
+      - key: JWT_SECRET
+        generateValue: true # Render יוצר מפתח אקראי וחזק
+      - key: JWT_EXPIRES_MINUTES
+        value: "120"
+      - key: CORS_ORIGINS
+        value: "*" # אחרי שה-React יעלה לאוויר: להחליף לכתובת שלו
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: SEED_DEMO_PASSWORD
+        sync: false
