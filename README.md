@@ -3,7 +3,7 @@
 שרת API לאתר מתנות במיתוג אישי. לקוחות בוחרים מתנות, מתאימים הדפסה אישית (שם או אות, גופן וצבע) ושולחים הזמנה עם כמה פריטים. המנהל מנהל מוצרים, קטגוריות, גופנים, צבעים והזמנות.
 
 > 🚀 **רוצה להעלות את השרת לאינטרנט?** התחילי בקובץ [`START-HERE.md`](START-HERE.md).
-> 💻 **כותבת את צד ה-React?** כל מה שצריך נמצא ב-[`FRONTEND-API-GUIDE.md`](FRONTEND-API-GUIDE.md).
+> 💻 **צד הלקוח (React):** [nameing-web-client](https://github.com/Ester-Orzel/nameing-web-client), כולל מדריך הבקשות והתשובות של ה-API.
 > 📋 **האפיון המאושר:** [`docs/SPEC.md`](docs/SPEC.md).
 
 ---
@@ -25,7 +25,7 @@
 ## מבנה הפרויקט
 
 ```
-backend-project/
+ameing-gifts-backend/
 ├── src/
 │   ├── app.ts                 בניית אפליקציית Express (CORS, אבטחה, Swagger, ניתוב)
 │   ├── server.ts              הפעלת השרת
@@ -50,8 +50,7 @@ backend-project/
 │   ├── openapi.json           קובץ OpenAPI (נוצר מ-src/docs/openapi.ts)
 │   └── SPEC.md                מסמך האפיון
 ├── render.yaml                הגדרות פריסה ל-Render
-├── START-HERE.md              מדריך העלאה לאינטרנט
-└── FRONTEND-API-GUIDE.md      מדריך לחיבור צד ה-React
+└── START-HERE.md              מדריך העלאה לאינטרנט
 ```
 
 ---

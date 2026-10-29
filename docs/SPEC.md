@@ -60,7 +60,7 @@
 
 ## ה. Endpoints
 
-ראי `README.md`, `FRONTEND-API-GUIDE.md`, ו-Swagger בכתובת `/api-docs`.
+ראי `README.md`, `הקובץ docs/api-guide.md במאגר הלקוח (nameing-web-client)`, ו-Swagger בכתובת `/api-docs`.
 
 ## ו. התאמה לדרישות החובה
 
