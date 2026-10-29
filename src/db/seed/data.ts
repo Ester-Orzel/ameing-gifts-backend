@@ -55,6 +55,35 @@ type RawProduct = Omit<SeedProduct, 'imageUrl'> & { imageText: string };
 const image = (text: string): string =>
   `https://placehold.co/600x600/f3e5e1/8a5a44?text=${encodeURIComponent(text)}`;
 
+/** כתובת התיקייה שבה נמצאות תמונות המוצרים האמיתיות (באתר ה־React) */
+export const PRODUCT_PHOTOS_BASE =
+  process.env.PRODUCT_PHOTOS_BASE_URL?.replace(/\/+$/, '') ??
+  'https://nameing-web-client.onrender.com/images/products';
+
+/** תמונה אמיתית לכל מוצר, לפי שם המוצר. מוצר שאין לו תמונה נשאר עם תמונת placeholder */
+const PRODUCT_PHOTOS: Record<string, string> = {
+  'תרמוס צבעוני חכם': 'thermos',
+  'בקבוק מים נירוסטה שחור': 'black-bottle',
+  'בקבוק ילדים עם כתר': 'crown-bottle',
+  'מחזיק מפתחות לב מעור': 'heart-keychain',
+  'תגית מזוודה מעור': 'luggage-tag',
+  'ארנק כרטיסים מעור': 'card-wallet',
+  'תיק טואלט מעור עם ידית': 'toiletry-bag',
+  'נרתיק לאוזניות': 'earbuds-case',
+  'מנורת לילה כוכב': 'star-lamp',
+  'מראה מתקפלת עם תאורה': 'mirror',
+  'מגבת רחצה לבנה': 'bath-towel',
+  'מכשיר אדים קטן': 'humidifier',
+  'קופסת תכשיטים מרובעת': 'jewelry-box',
+  'קופסה שקופה עם מכסה': 'clear-box',
+  'מגבת ידיים': 'hand-towel',
+};
+
+export const photoFor = (name: string): string | undefined => {
+  const slug = PRODUCT_PHOTOS[name];
+  return slug ? `${PRODUCT_PHOTOS_BASE}/${slug}.webp` : undefined;
+};
+
 const RAW_PRODUCTS: RawProduct[] = [
   {
     name: 'תרמוס צבעוני חכם',
@@ -188,7 +217,7 @@ const RAW_PRODUCTS: RawProduct[] = [
 
 export const PRODUCTS: ReadonlyArray<SeedProduct> = RAW_PRODUCTS.map(({ imageText, ...product }) => ({
   ...product,
-  imageUrl: image(imageText),
+  imageUrl: photoFor(product.name) ?? image(imageText),
 }));
 
 export interface SeedCustomer {

@@ -76,6 +76,19 @@ async function seedCatalog(): Promise<{
     log(`• מוצרים כבר קיימים (${existingProducts}) - לא נוספו`);
   }
 
+  // מוצרים שעדיין מציגים תמונת placeholder מקבלים את התמונה האמיתית.
+  // תמונה שהמנהלת החליפה בעצמה לא משתנה.
+  let photosUpdated = 0;
+  for (const product of PRODUCTS) {
+    if (product.imageUrl.startsWith('https://placehold.co')) continue;
+    const result = await prisma.product.updateMany({
+      where: { name: product.name, imageUrl: { startsWith: 'https://placehold.co' } },
+      data: { imageUrl: product.imageUrl },
+    });
+    photosUpdated += result.count;
+  }
+  if (photosUpdated > 0) log(`✔ עודכנו תמונות אמיתיות ל־${photosUpdated} מוצרים`);
+
   const products = await prisma.product.findMany({ orderBy: { id: 'asc' }, select: { id: true } });
   return { categoryIds, fontIds, colorIds, productIds: products.map((product) => product.id) };
 }
